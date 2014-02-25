@@ -1,0 +1,12 @@
+{application, grib_ingest,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { grib_ingest_app, []}},
+  {env, []}
+ ]}.
