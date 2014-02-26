@@ -198,3 +198,4 @@ gribs_for_interval_sat2_test() ->
   [{C,1},{C,2}] = gribs_for_interval({{2012,1,1},{13,30,0}},{{2012,1,1},{13,40,0}},C,[0,1,2,3]).
 
 -endif.
+

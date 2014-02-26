@@ -2,11 +2,13 @@
  [
   {description, ""},
   {vsn, "1"},
+
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  inets
                  ]},
-  {mod, { grib_ingest_app, []}},
+  {mod, {grib_ingest_app, ["stor"]}},
   {env, []}
  ]}.

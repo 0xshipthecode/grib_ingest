@@ -23,7 +23,7 @@
 %% ------------------------------------------------------------------
 
 start_link(GribSrc,StorDir,LogF) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [GribSrc,StorDir,LogF], []).
+    gen_server:start_link(?MODULE, [GribSrc,StorDir,LogF], []).
 
 
 retrieve_gribs(Pid,From,To,AtTime,Delta) ->
@@ -34,7 +34,9 @@ retrieve_gribs(Pid,From,To,AtTime,Delta) ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args) ->
+init(Args=[#grib_source{name=N},_,LogF]) ->
+  LogF(info,"grib_source_server [~p] is being initialized.", [N]),
+  grib_ingest_server:register_server(N,self()),
   process_flag(trap_exit,true),
   {ok, Args}.
 
@@ -59,27 +61,30 @@ handle_info(_Info, State) ->
 
 terminate(shutdown, [#grib_source{name=N},_,LogF]) ->
   LogF(info, "grib_server [~p] is being shut down", [N]),
+  grib_ingest_server:unregister_server(N),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% ------------------------------------------------------------------
-%% Internal Function Definitions
+%% Internal Functions
 %% ------------------------------------------------------------------
 
+-spec compute_manifest(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),#grib_source{}) ->
+        unsatisfiable|{calendar:datetime(),calendar:datetime(),[string()]}.
 compute_manifest(From,To,AtTime,Delta,#grib_source{cycles=Cs,delay=Dhrs,file_hours=Fhrs,name_fun=F}) ->
   ToAdjusted = cycle_logic:shift_by_hours(AtTime,-Dhrs),
-  LC0 = cycle_logic:latest_cycle_for_time(ToAdjusted),
+  LC0 = cycle_logic:latest_cycle_for_time(ToAdjusted,Cs),
   LC = cycle_logic:shift_cycle(LC0,Delta,Cs),
   case cycle_logic:gribs_for_interval(From,To,LC,Fhrs) of
     unsatisfiable ->
       unsatisfiable;
-    GribIds=[{LC,F}|Rest] ->
-      GribNames = lists:map(fun(X) -> lists:flatten(F(X)) end, GribIds),
-      CovFrom = cycle_logic:shift_by_hours(LC,F),
-      {LC,L} = lists:last(Rest),
-      CovTo = cycle_logic:shift_by_hours(LC,L),
+    GribIds=[{LC,Fh0}|Rest] ->
+      GribNames = lists:map(fun({Cycle,Hr}) -> lists:flatten(F(Cycle,Hr)) end, GribIds),
+      CovFrom = cycle_logic:shift_by_hours(LC,Fh0),
+      {LC,Fh1} = lists:last(Rest),
+      CovTo = cycle_logic:shift_by_hours(LC,Fh1),
       {CovFrom,CovTo,GribNames}
   end.
 
@@ -107,12 +112,13 @@ download_gribs(List,StorDir,#grib_source{name=N,url_prefix=Pfix,domain=D},LogF) 
 
 -spec find_serverside_missing_gribs([string()],#grib_source{}) -> [string()].
 find_serverside_missing_gribs(List,#grib_source{url_prefix=Pfix}) ->
-  lists:filter(fun(Id) -> 
-        case httpc:request(head, {Pfix ++ "/" ++ Id,[]},[],[]) of
+  lists:filter(fun(Id) ->
+        Url = Pfix ++ "/" ++ Id,
+        case httpc:request(head, {Url,[]},[],[]) of
           {ok, {{_,200,_},_,_}} ->
-            true;
+            false;
           _ ->
-            false
+            true
         end
     end, List).
 
@@ -124,7 +130,7 @@ retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D},Log
   case compute_manifest(From,To,AtTime,Delta,GS) of
     {CovFrom,CovTo,Ids} ->
       LogF(info,"grib_server [~p] -> manifest has ~p files covering interval from ~w to ~w", [N,length(Ids),CovFrom,CovTo]),
-      NonLocals = lists:filter(fun (X) -> not filelib:is_regular(filename:join(StorDir,D,X)) end, Ids),
+      NonLocals = lists:filter(fun (X) -> not filelib:is_regular(filename:join([StorDir,D,X])) end, Ids),
       case find_serverside_missing_gribs(NonLocals,GS) of
         [] ->
           LogF(info, "grib_server [~p] -> ~p gribs available locally, ~p available remotely, downloading now",
@@ -133,7 +139,7 @@ retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D},Log
             [] ->
               LogF(info, "grib_server [~p] -> all ~p files downloaded successfully, returning manifest covering [~w,~w] with ~p total files.",
                     [N,length(NonLocals),CovFrom,CovTo,length(Ids)]),
-                  {CovFrom,CovTo,lists:map(fun (X) -> filename:join(StorDir,D,X) end, Ids)};
+                  {CovFrom,CovTo,lists:map(fun (X) -> filename:join([StorDir,D,X]) end, Ids)};
             Failures ->
               {downloads_failed,Failures}
           end;

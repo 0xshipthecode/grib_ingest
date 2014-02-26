@@ -7,6 +7,7 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/0]).
+-export([register_server/2,unregister_server/1,find_server_pid/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -20,7 +21,17 @@
 %% ------------------------------------------------------------------
 
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [dict:new()], []).
+
+register_server(Name,Pid) ->
+  gen_server:call(?SERVER,{register_server,Name,Pid},5000).
+
+unregister_server(Name) ->
+  gen_server:call(?SERVER,{unregister_server,Name},5000).
+
+find_server_pid(Name) ->
+  gen_server:call(?SERVER,{get_server_pid,Name},5000).
+
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -29,8 +40,20 @@ start_link() ->
 init(Args) ->
     {ok, Args}.
 
-handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+handle_call(Request, _From, State=[Dict]) ->
+  case Request of
+    {register_server,Name,Pid} ->
+      {reply,ok,[dict:store(Name,Pid,Dict)]};
+    {unregister_server,Name} ->
+      {reply,ok,[dict:erase(Name,Dict)]};
+    {get_server_pid,Name} ->
+      case dict:find(Name,Dict) of
+        {ok,Pid} ->
+          {reply,Pid,State};
+        error ->
+          {reply,not_found,State}
+      end
+  end.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
