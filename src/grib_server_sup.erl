@@ -1,5 +1,5 @@
 
--module(grib_source_sup).
+-module(grib_server_sup).
 
 -behaviour(supervisor).
 

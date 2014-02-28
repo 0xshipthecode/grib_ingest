@@ -11,7 +11,7 @@
 
 start(_StartType, StartArgs) ->
   grib_ingest_sup:start_link(StartArgs),
-  grib_source_sup:start_link(StartArgs).
+  grib_server_sup:start_link(StartArgs).
 
 stop(_State) ->
     ok.

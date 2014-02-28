@@ -1,12 +1,17 @@
 -module(grib_ingest).
 -author("Martin Vejmelka <vejmelkam@gmail.com>").
 -export([start/0]).
--export([retrieve_gribs/4,retrieve_gribs_simple/3]).
+-export([retrieve_gribs/4,retrieve_gribs_simple/3,get_grib_info/1]).
 
 
 start() ->
   application:start(inets),
   application:start(grib_ingest).
+
+
+get_grib_info(Name) ->
+  Pid = grib_ingest_server:find_server_pid(Name),
+  grib_source_server:grib_source_info(Pid).
 
 
 retrieve_gribs_simple(GSName,From,To) ->
