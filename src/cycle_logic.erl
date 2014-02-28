@@ -47,10 +47,10 @@ cull_cycle(Cycle, _) ->
 
 
 % retrieve the latest cycle which is before the specified datetime <TS>
-latest_cycle_for_time(TS={Date,{H,_,_}},DailyCycles) ->
-  case lists:takewhile(fun (X) -> X =< H end, DailyCycles) of
-    [] -> latest_cycle_for_time(set_hour(shift_by_days(TS,-1),23),DailyCycles);
-    [CycleHour|_] -> {Date,{CycleHour,0,0}}
+latest_cycle_for_time(TS={Date,{H,_,_}},CycleStartHrs) ->
+  case lists:takewhile(fun (X) -> X =< H end, CycleStartHrs) of
+    [] -> latest_cycle_for_time(set_hour(shift_by_days(TS,-1),23),CycleStartHrs);
+    EligibleCycles -> {Date,{lists:last(EligibleCycles),0,0}}
   end.
 
 
