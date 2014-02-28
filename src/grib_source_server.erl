@@ -31,7 +31,8 @@ retrieve_gribs(Pid,From,To,AtTime,Delta) ->
   gen_server:call(Pid,{retrieve_gribs,From,To,AtTime,Delta},infinity).
 
 grib_source_info(Pid) ->
-  gen_server:call(Pid,get_grib_source).
+  #grib_source{grib_info = GI} = gen_server:call(Pid,get_grib_source),
+  GI.
 
 
 %% ------------------------------------------------------------------
