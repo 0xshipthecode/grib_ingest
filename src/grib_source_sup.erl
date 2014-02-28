@@ -9,10 +9,10 @@
 -export([start_link/1]).
 
 %% Supervisor callbacks
--export([init/1,load_grib_source_def/1]).
+-export([init/1,load_grib_source_def/1,start_grib_server/3,stop_grib_server/1]).
 
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type, Args), {I, {I, start_link, Args}, permanent, 5000, Type, [I]}).
+-define(GRIB_SRC_SRV(N, Args), {N, {grib_source_server, start_link, Args}, permanent, 5000, worker, [grib_source_server]}).
 
 %% ===================================================================
 %% API functions
@@ -30,9 +30,23 @@ init([StorDir]) ->
   LogF = fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end,
   {ok,EtcFiles} = file:list_dir("etc"),
   GribDefFiles = lists:filter(fun (X) -> lists:suffix(".grib",X) end, EtcFiles),
-  Defs = lists:map(fun (F) -> load_grib_source_def("etc/" ++ F) end, GribDefFiles),
-  ChDefs = lists:map(fun (X) -> ?CHILD(grib_source_server,worker,[X,StorDir,LogF]) end, Defs),
+  ChDefs = lists:map(fun (F) -> make_child_spec(F,StorDir,LogF) end, GribDefFiles),
   {ok, {{one_for_one, 5, 10}, ChDefs}}.
+
+
+make_child_spec(File,StorDir,LogF) ->
+  GS = load_grib_source_def("etc/" ++ File),
+  #grib_source{name=N} = GS,
+  ?GRIB_SRC_SRV(N,[GS,StorDir,LogF]).
+
+
+start_grib_server(File,StorDir,LogF) ->
+  ChSpec = make_child_spec(File,StorDir,LogF),
+  supervisor:start_child(?MODULE,ChSpec).
+
+
+stop_grib_server(Name) ->
+  supervisor:terminate_child(?MODULE,Name).
 
 
 -spec load_grib_source_def(string()) -> #grib_source{}.
