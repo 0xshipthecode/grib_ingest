@@ -1,12 +1,15 @@
 # grib_ingest
 
 ## Introduction
-The `grib_ingest` system is an Erlang/OTP compliant application that provides the capability to download GRIB2 files which are frequently used to initialize and force mesoscale weather simulations.  An example of a model that can be used for mesoscale numerical weather prediction is WRF - Weather Research and Forecasting model http://wrf-model.org .
+
+The `grib_ingest` system is an Erlang/OTP compliant application that provides the capability to download GRIB2 files which are frequently used to initialize and force mesoscale weather simulations.  An example of a model that can be used for mesoscale numerical weather prediction is WRF http://wrf-model.org .
 
 The `grib_ingest` application can be configured to retrieve GRIB2 files from various sources and comes with two pre-configured GRIB2 sources:
 
-  * NAM 218 12km products for the CONUS (CONterminous United States) region http://www.nco.ncep.noaa.gov/pmb/products/nam/
+  * NAM 218 12km products for the CONUS region http://www.nco.ncep.noaa.gov/pmb/products/nam/
   * GFS 1 degree global model http://www.nco.ncep.noaa.gov/pmb/products/gfs/
+
+Notes:  CONUS = Conterminous United States, GFS = Global Forecast Model, WRF = Weather Research And Forecasting model, GRIB2 = GRidded Binary v2, NAM = North American Mesoscale
 
 ## API
 
