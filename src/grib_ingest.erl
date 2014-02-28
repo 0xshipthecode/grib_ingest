@@ -52,5 +52,7 @@ retrieve_gribs(Pid,From,To,AtTime,Delta,Report,[shift_cycle|Rest]) ->
   retrieve_gribs(Pid,From,To,AtTime,Delta+1,Report,Rest);
 retrieve_gribs(Pid,From,To,AtTime,Delta,Report,[{wait_for_mins,TimeoutMin}|Rest]) ->
   timer:sleep(TimeoutMin * 60 * 1000),
-  retrieve_gribs(Pid,From,To,AtTime,Delta,Report,Rest).
+  retrieve_gribs(Pid,From,To,AtTime,Delta,Report,Rest);
+retrieve_gribs(Pid,From,To,AtTime,Delta,Report,[UnknownStep|Rest]) ->
+  retrieve_gribs(Pid,From,To,AtTime,Delta,[{failed,unknown_step,UnknownStep}|Report],Rest).
 
