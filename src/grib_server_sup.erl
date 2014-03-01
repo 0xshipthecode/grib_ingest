@@ -27,7 +27,12 @@ start_link(Args) ->
 
 
 init([StorDir]) ->
-  LogF = fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end,
+  LogF = case application:get_env(grib_ingest,logging_function) of
+    undefined ->
+      fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end;
+    {ok, F} ->
+      F
+  end,
   {ok,EtcFiles} = file:list_dir("etc"),
   GribDefFiles = lists:filter(fun (X) -> lists:suffix(".grib",X) end, EtcFiles),
   ChDefs = lists:map(fun (F) -> make_child_spec(F,StorDir,LogF) end, GribDefFiles),
