@@ -177,7 +177,7 @@ retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D},Log
       case NonLocals of
         [] ->
           LogF(info, "grib_server [~p] -> all ~p gribs available locally, returning immediately.", [N,length(Ids)]),
-          {CovFrom,CovTo,Ids};
+          {CovFrom,CovTo,lists:map(fun (X) -> filename:join([StorDir,D,X]) end, Ids)};
         _NotEmpty ->
           RemoteInfo = lists:map(fun(X) -> check_remote_grib(X,GS) end,NonLocals),
           case lists:filter(fun ({missing,_}) -> true; (_) -> false end, RemoteInfo) of
