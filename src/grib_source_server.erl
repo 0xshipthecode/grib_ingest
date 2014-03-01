@@ -31,7 +31,7 @@ retrieve_gribs(Pid,From,To,AtTime,Delta) ->
   gen_server:call(Pid,{retrieve_gribs,From,To,AtTime,Delta},infinity).
 
 grib_source_info(Pid) ->
-  #grib_source{grib_info = GI} = gen_server:call(Pid,get_grib_source),
+  #grib_source{grib_info = GI} = gen_server:call(Pid,get_grib_source_info),
   GI.
 
 
@@ -50,7 +50,7 @@ handle_call(Request, _From, State=[GS=#grib_source{name=N},StorDir,LogF]) ->
   case Request of
     {retrieve_gribs,From,To,AtTime,Delta} ->
       {reply, retrieve_gribs(From,To,AtTime,Delta,StorDir,GS,LogF), State};
-    grib_source_info ->
+    get_grib_source_info ->
       {reply, GS, State};
     Other ->
       LogF(flash, "grib_server [~p] received an unexpected message ~p.", [N,Other]),
