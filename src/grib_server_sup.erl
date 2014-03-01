@@ -26,12 +26,18 @@ start_link(Args) ->
 %% ===================================================================
 
 
-init([StorDir]) ->
+init([StorDir0]) ->
   LogF = case application:get_env(grib_ingest,logging_function) of
     undefined ->
       fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end;
     {ok, F} ->
       F
+  end,
+  StorDir = case application:get_env(grib_ingest,grib_storage_dir) of
+    undefiend ->
+      StorDir0;
+    {ok, StorDir1} ->
+      StorDir1
   end,
   {ok,EtcFiles} = file:list_dir("etc"),
   GribDefFiles = lists:filter(fun (X) -> lists:suffix(".grib",X) end, EtcFiles),
