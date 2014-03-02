@@ -34,7 +34,7 @@ init([StorDir0]) ->
       F
   end,
   StorDir = case application:get_env(grib_ingest,grib_storage_dir) of
-    undefiend ->
+    undefined ->
       StorDir0;
     {ok, StorDir1} ->
       StorDir1

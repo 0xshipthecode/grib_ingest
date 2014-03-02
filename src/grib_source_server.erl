@@ -9,7 +9,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/3,retrieve_gribs/5,grib_source_info/1]).
+-export([start_link/3,retrieve_gribs/5]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -30,18 +30,14 @@ start_link(GribSrc,StorDir,LogF) ->
 retrieve_gribs(Pid,From,To,AtTime,Delta) ->
   gen_server:call(Pid,{retrieve_gribs,From,To,AtTime,Delta},infinity).
 
-grib_source_info(Pid) ->
-  #grib_source{grib_info = GI} = gen_server:call(Pid,get_grib_source_info),
-  GI.
-
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args=[#grib_source{name=N},_,LogF]) ->
+init(Args=[GS=#grib_source{name=N},_,LogF]) ->
   LogF(info,"grib_source_server [~p] registering with grib_ingest_server.", [N]),
-  grib_ingest_server:register_server(N,self()),
+  grib_ingest_server:register_server(N,GS,self()),
   process_flag(trap_exit,true),
   {ok, Args}.
 

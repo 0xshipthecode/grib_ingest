@@ -1,7 +1,8 @@
 -module(grib_ingest).
 -author("Martin Vejmelka <vejmelkam@gmail.com>").
 -export([start/0]).
--export([retrieve_gribs/4,retrieve_gribs_simple/3,get_grib_info/1,get_grib_server_pid/1]).
+-export([retrieve_gribs/4,retrieve_gribs_simple/3]).
+-export([get_grib_source/1,get_grib_info/1,get_grib_server_pid/1]).
 -include("grib_ingest.hrl").
 
 start() ->
@@ -9,14 +10,18 @@ start() ->
   application:start(grib_ingest).
 
 
--spec get_grib_info(atom()|string()) -> #grib_source{}|not_found.
+-spec get_grib_info(atom()|string()) -> any()|not_found.
 get_grib_info(Name) ->
-  case grib_ingest_server:find_server_pid(Name) of
+  case get_grib_source(Name) of
     not_found ->
       not_found;
-    Pid ->
-      grib_source_server:grib_source_info(Pid)
+    #grib_source{grib_info=GI} ->
+      GI
   end.
+
+-spec get_grib_source(atom()|string()) -> #grib_source{}|not_found.
+get_grib_source(Name) ->
+  grib_ingest_server:get_grib_source(Name).
 
 -spec get_grib_server_pid(atom()|string()) -> pid()|not_found.
 get_grib_server_pid(Name) ->
