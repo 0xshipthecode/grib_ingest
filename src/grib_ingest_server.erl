@@ -49,7 +49,7 @@ handle_call(Request, _From, State=[Dict]) ->
       {reply,ok,[dict:erase(Name,Dict)]};
     {get_server_pid,Name} ->
       case dict:find(Name,Dict) of
-        {ok,Pid,_} ->
+        {ok,{Pid,_}} ->
           {reply,Pid,State};
         error ->
           {reply,not_found,State}
