@@ -84,9 +84,8 @@ code_change(_OldVsn, State, _Extra) ->
 -spec compute_manifest(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),#grib_source{}) ->
           unsatisfiable|{calendar:datetime(),calendar:datetime(),calendar:datetime(),[string()]}.
 compute_manifest(From,To,AtTime,Delta,#grib_source{cycles=Cs,delay=Dhrs,file_hours=Fhrs,name_fun=F}) ->
-  ToAdjusted = cycle_logic:shift_by_hours(AtTime,-Dhrs),
   LC0 = cycle_logic:latest_cycle_for_time(From,Cs),
-  LC1 = cycle_logic:latest_cycle_for_time(ToAdjusted,Cs),
+  LC1 = cycle_logic:latest_cycle_for_time(cycle_logic:shift_by_hours(AtTime,-Dhrs),Cs),
   LC2 = cycle_logic:cull_cycle(LC0,LC1),
   LC = cycle_logic:shift_cycle(LC2,Delta,Cs),
   case cycle_logic:gribs_for_interval(From,To,LC,Fhrs) of
