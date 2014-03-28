@@ -15,6 +15,8 @@
     domain :: string(),
     % the hours [since cycle time] for which grib files are available every cycle
     file_hours :: [non_neg_integer()],
+    % the method of determining which grib files to download (single_cycle vs. multi_cycle)
+    grib_resolution_method :: single_cycle|multi_cycle,
     % maximum concurrent downloads allowed for this source
     max_downloads :: pos_integer(),
     % extra entries that must be added to the WPS namelist to ensure correct function

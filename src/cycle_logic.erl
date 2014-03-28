@@ -1,7 +1,7 @@
 
 -module(cycle_logic).
 -author("Martin Vejmelka <vejmelkam@gmail.com>").
--export([shift_cycle/3,latest_cycle_for_time/2,cull_cycle/2,gribs_for_time/3,gribs_for_interval/4]).
+-export([shift_cycle/3,latest_cycle_for_time/2,cull_cycle/2,gribs_for_time/3,gribs_for_interval/4,gribs_for_interval2/5]).
 -export([shift_by_hours/2,seconds_between/2,seconds_elapsed/1]).
 
 -ifdef(TEST).
@@ -76,6 +76,59 @@ gribs_for_time(TS,Cycle,Fhours) ->
   end.
 
 
+% Retrieve a list of grib file identifications in the form {WhichCycle,WhichForecastHour} that should be downloaded
+% to cover the datetime TS.  If a grib2 file is not available for this specific hour, two grib files are returned
+% the closest before and after the datetime <ts>.  This version of the function is also able to use the next cycle if
+% available and the given datetime is beyond the last forecast hour of the latest_cycle_for_time.
+-spec gribs_for_time2(calendar:datetime(),calendar:datetime(),[non_neg_integer()],[non_neg_integer()]) -> [{calendar:datetime(),non_neg_integer()}].
+gribs_for_time2(TS,LC,Cycles,Fh) ->
+  C1 = min_time(latest_cycle_for_time(TS,Cycles),LC),
+  Hrs = hours_between(C1,TS),
+  {UpTo,After} = lists:splitwith(fun (X) -> X =< Hrs end, Fh),
+  LeftClosest = lists:last(UpTo),
+  LCTime = shift_by_hours(C1,LeftClosest),
+  case LCTime == TS of
+    true ->
+      [{C1,LeftClosest}];
+    false ->
+      case After of
+        [] ->
+          C2 = shift_cycle(C1,1,Cycles),
+          case C2 =< LC of
+            true ->
+              [{C1,LeftClosest},{C2,hd(Fh)}];
+            false ->
+              unsatisfiable
+          end;
+        [RightClosest|_] ->
+          [{C1,LeftClosest},{C1,RightClosest}]
+      end
+  end.
+
+
+-spec gribs_for_interval2(calendar:datetime(),calendar:datetime(),calendar:datetime(),[non_neg_integer()],[non_neg_integer()],[{calendar:datetime(),non_neg_integer()}]) ->[{calendar:datetime(),non_neg_integer()}].
+gribs_for_interval2(To,To,LatestCycle,Cycles,FcHrs,Res) ->
+  case gribs_for_time2(To,LatestCycle,Cycles,FcHrs) of
+    unsatisfiable ->
+      unsatisfiable;
+    Gs ->
+      lists:usort(Gs++Res)
+  end;
+gribs_for_interval2(From,To,_LatestCycle,_Cycles,_FcHrs,_Res) when From > To ->
+  [];
+gribs_for_interval2(From,To,LatestCycle,Cycles,FcHrs,Res) when From < To ->
+  NextTime = min_time(shift_by_seconds(From,3600),To),
+  case gribs_for_time2(From,LatestCycle,Cycles,FcHrs) of
+    unsatisfiable ->
+      unsatisfiable;
+    Gs ->
+      gribs_for_interval2(NextTime,To,LatestCycle,Cycles,FcHrs,Gs++Res)
+  end.
+
+gribs_for_interval2(From,To,LatestCycle,Cycles,FcHrs) ->
+  gribs_for_interval2(From,To,LatestCycle,Cycles,FcHrs,[]).
+
+
 -spec gribs_for_interval(calendar:datetime(),calendar:datetime(),calendar:datetime(),[non_neg_integer()],[non_neg_integer()],find_start|find_end) -> [{calendar:datetime(),non_neg_integer()}].
 gribs_for_interval(From,_To,Cycle,_,_,_) when From < Cycle ->
   unsatisfiable;
@@ -138,6 +191,10 @@ seconds_elapsed(Since) ->
 shift_by_hours(T,Hrs) ->
   shift_by_seconds(T, Hrs*3600).
 
+min_time(T1,T2) when T1 < T2 ->
+  T1;
+min_time(_T1,T2) ->
+  T2.
 
 %% --------------------------------------------------
 %% Unit tests
@@ -197,5 +254,20 @@ gribs_for_interval_sat2_test() ->
   C = {{2012,1,1},{12,0,0}},
   [{C,1},{C,2}] = gribs_for_interval({{2012,1,1},{13,30,0}},{{2012,1,1},{13,40,0}},C,[0,1,2,3]).
 
+
+gribs_for_interval2_cross_cycle_test() ->
+  Gs = cycle_logic:gribs_for_interval2({{2013,1,1},{17,0,0}},{{2013,1,2},{4,0,0}},{{2014,1,1},{0,0,0}},[0],[0,3,6,9,12,15,18,21]),
+  Gs =[{{{2013,1,1},{0,0,0}},15}, {{{2013,1,1},{0,0,0}},18}, {{{2013,1,1},{0,0,0}},21}, {{{2013,1,2},{0,0,0}},0}, {{{2013,1,2},{0,0,0}},3}, {{{2013,1,2},{0,0,0}},6}].
+
+gribs_for_interval2_in_cycle_test() ->
+  Gs = cycle_logic:gribs_for_interval2({{2013,1,1},{17,0,0}},{{2013,1,1},{19,0,0}},{{2014,1,1},{0,0,0}},[0],[0,3,6,9,12,15,18,21]),
+  Gs =[{{{2013,1,1},{0,0,0}},15}, {{{2013,1,1},{0,0,0}},18}, {{{2013,1,1},{0,0,0}},21}].
+
+gribs_for_interval2_unsat_test() ->
+  unsatisfiable = cycle_logic:gribs_for_interval2({{2013,1,1},{17,0,0}},{{2013,1,2},{4,0,0}},{{2013,1,1},{0,0,0}},[0],[0,3,6,9,12,15,18,21]).
+
+
+gribs_for_interval2_single_test() ->
+  [{{{2013,1,1},{0,0,0}},15}] = cycle_logic:gribs_for_interval2({{2013,1,1},{15,0,0}},{{2013,1,1},{15,0,0}},{{2013,1,1},{0,0,0}},[0],[0,3,6,9,12,15,18,21]).
 -endif.
 

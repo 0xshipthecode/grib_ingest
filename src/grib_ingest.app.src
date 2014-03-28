@@ -1,6 +1,6 @@
 {application, grib_ingest,
  [
-  {description, ""},
+  {description, "An application for retrieving GRIB2 files from internet sources."},
   {vsn, "1"},
 
   {registered, []},

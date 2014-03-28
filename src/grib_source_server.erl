@@ -77,22 +77,26 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 
 
--spec compute_manifest(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),#grib_source{}) ->
+-spec compute_manifest(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),#grib_source{},single_cycle|multi_cycle) ->
           unsatisfiable|{calendar:datetime(),calendar:datetime(),calendar:datetime(),[string()]}.
-compute_manifest(From,To,AtTime,Delta,#grib_source{cycles=Cs,delay=Dhrs,file_hours=Fhrs,name_fun=F}) ->
-  LC0 = cycle_logic:latest_cycle_for_time(From,Cs),
-  LC1 = cycle_logic:latest_cycle_for_time(cycle_logic:shift_by_hours(AtTime,-Dhrs),Cs),
-  LC2 = cycle_logic:cull_cycle(LC0,LC1),
-  LC = cycle_logic:shift_cycle(LC2,-Delta,Cs),
-  case cycle_logic:gribs_for_interval(From,To,LC,Fhrs) of
+compute_manifest(From,To,AtTime,Delta,#grib_source{cycles=Cs,delay=Dhrs,file_hours=Fhrs,name_fun=F},M) ->
+  LC0 = cycle_logic:latest_cycle_for_time(cycle_logic:shift_by_hours(AtTime,-Dhrs),Cs),
+  LC = cycle_logic:shift_cycle(LC0,-Delta,Cs),
+  Res = case M of
+    single_cycle ->
+      cycle_logic:gribs_for_interval(From,To,LC,Fhrs);
+    multi_cycle ->
+      cycle_logic:gribs_for_interval2(From,To,LC,Cs,Fhrs)
+  end,
+  case Res of
     unsatisfiable ->
       unsatisfiable;
-    GribIds=[{LC,Fh0}|Rest] ->
+    GribIds=[{LC1,Fh0}|Rest] ->
       GribNames = lists:map(fun({Cycle,Hr}) -> lists:flatten(F(Cycle,Hr)) end, GribIds),
-      CovFrom = cycle_logic:shift_by_hours(LC,Fh0),
-      {LC,Fh1} = lists:last(Rest),
-      CovTo = cycle_logic:shift_by_hours(LC,Fh1),
-      {LC,CovFrom,CovTo,GribNames}
+      CovFrom = cycle_logic:shift_by_hours(LC1,Fh0),
+      {LC2,Fh1} = lists:last(Rest),
+      CovTo = cycle_logic:shift_by_hours(LC2,Fh1),
+      {LC1,CovFrom,CovTo,GribNames}
   end.
 
 
@@ -163,9 +167,9 @@ write_grib_info(Infos,StorDir,Domain) ->
 
 -spec retrieve_gribs(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),string(),#grib_source{},fun()) ->
     {calendar:datetime(),calendar:datetime(),[string()]}|{failed_downloads,[string()]}|{gribs_missing,[string()]}|unsatisfiable.
-retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D},LogF) ->
+retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D,grib_resolution_method=M},LogF) ->
   LogF(info, "grib_server [~p] -> received request from ~w to ~w at time ~w delta ~p", [N,From,To,AtTime,Delta]),
-  case compute_manifest(From,To,AtTime,Delta,GS) of
+  case compute_manifest(From,To,AtTime,Delta,GS,M) of
     {Cycle,CovFrom,CovTo,Ids} ->
       LogF(info,"grib_server [~p] -> manifest has ~p files covering interval from ~w to ~w from cycle ~w", [N,length(Ids),CovFrom,CovTo,Cycle]),
       NonLocals = lists:filter(fun (X) -> check_local_grib(filename:join([StorDir,D,X])) end, Ids),
@@ -194,7 +198,8 @@ retrieve_gribs(From,To,AtTime,Delta,StorDir,GS=#grib_source{name=N,domain=D},Log
           end
       end;
     unsatisfiable ->
-      LogF(warn, "grib_server [~p] -> cannot satisfy request from ~w to ~w at time ~w with Delta ~w", [N,From,To,AtTime,Delta])
+      LogF(warn, "grib_server [~p] -> cannot satisfy request from ~w to ~w at time ~w with Delta ~w", [N,From,To,AtTime,Delta]),
+      unsatisfiable
   end.
 
 

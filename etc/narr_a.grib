@@ -1,0 +1,13 @@
+{grib_source,
+ narr_a,
+ [0],
+ 0,
+ "http://nomads.ncdc.noaa.gov/data/narr",
+ fun({{Y, M, D}, {H, _M, _S}}, FcHr) -> io_lib:format("~4..0B~2..0B/~4..0B~2..0B~2..0B/narr-a_221_~4..0B~2..0B~2..0B_~2..0B00_000.grb",
+    [Y, M, Y, M, D, Y, M, D, FcHr]) end,
+ "narr_a",
+ [0,3,6,9,12,15,18,21],
+ multi_cycle,
+ 1,
+ [{vtable_file,"ungrib/Variable_Tables/Vtable.NARR"}]
+ }.
