@@ -1,0 +1,12 @@
+{grib_source,
+ gfs_1deg,
+ [0, 6, 12, 18],
+ 2,
+ "http://nomads.ncdc.noaa.gov/data/gfs4",
+ fun({{Y, M, D}, {H, _M, _S}}, FcHr) -> io_lib:format("~4..0B~2..0B/~4..0B~2..0B~2..0B/gfs_4_~4..0B~2..0B~2..0B_~2..0B00_~3..0B.grb2", [Y,M,Y,M,D,Y,M,D,H,FcHr]) end,
+ "gfs_1deg",
+ lists:map(fun(X) -> X * 3 end, lists:seq(0, 64)),
+ single_cycle,
+ 1,
+ [{vtable_file,"ungrib/Variable_Tables/Vtable.GFS"}, {wrf_namelist_keys,[]}]
+ }.
