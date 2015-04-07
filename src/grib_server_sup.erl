@@ -29,7 +29,8 @@ start_link(Args) ->
 init([StorDir0]) ->
   LogF = case application:get_env(grib_ingest,logging_function) of
     undefined ->
-      fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end;
+      %fun (C,T,A) -> io:format("~p: " ++ T ++ "~n", [C|A]) end;
+      fun (C, T, A) -> error_logger:info_report(lists:flatten(io_lib:format("~p: " ++ T ++ "~n", [C|A]))) end;
     {ok, F} ->
       F
   end,
