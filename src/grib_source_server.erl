@@ -80,7 +80,8 @@ code_change(_OldVsn, State, _Extra) ->
 -spec compute_manifest(calendar:datetime(),calendar:datetime(),calendar:datetime(),integer(),#grib_source{},single_cycle|multi_cycle) ->
           unsatisfiable|{calendar:datetime(),calendar:datetime(),calendar:datetime(),[string()]}.
 compute_manifest(From,To,AtTime,Delta,#grib_source{cycles=Cs,delay=Dhrs,file_hours=Fhrs,name_fun=F},M) ->
-  LC0 = cycle_logic:latest_cycle_for_time(cycle_logic:shift_by_hours(AtTime,-Dhrs),Cs),
+  LCM = cycle_logic:shift_by_hours(From,Dhrs),
+  LC0 = cycle_logic:latest_cycle_for_time(cycle_logic:shift_by_hours(cycle_logic:min_time(AtTime, LCM),-Dhrs),Cs),
   LC = cycle_logic:shift_cycle(LC0,-Delta,Cs),
   Res = case M of
     single_cycle ->

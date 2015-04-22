@@ -2,7 +2,7 @@
 -module(cycle_logic).
 -author("Martin Vejmelka <vejmelkam@gmail.com>").
 -export([shift_cycle/3,latest_cycle_for_time/2,cull_cycle/2,gribs_for_time/3,gribs_for_interval/4,gribs_for_interval2/5]).
--export([shift_by_hours/2,seconds_between/2,seconds_elapsed/1]).
+-export([shift_by_hours/2,seconds_between/2,seconds_elapsed/1,min_time/2]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
